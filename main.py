@@ -161,23 +161,38 @@ def check(color):
             if checkMove(p,Reg.col,Reg.row):
                 return True
 
-def checkMate(color):
-    Mate=True
+def squareAttacked(col, row, byColor):
     for p in allPiece:
-        if p.color==color:
+        if p.color == byColor:
+            if checkMove(p, col, row, simulate=True):
+                return True
+    return False
+
+def checkMate(color):
+    Mate = True
+    for p in list(allPiece):
+        if p.color == color:
             for i in range(8):
                 for j in range(8):
-                    if checkMove(p,i,j):
-                        oldX=p.col
-                        oldY=p.row
-                        p.col=i
-                        p.row=j
+                    if checkMove(p, i, j, simulate=True):
+                        oldX, oldY = p.col, p.row
+                        victim = None
+                        for other in allPiece:
+                            if other.col == i and other.row == j and other != p:
+                                victim = other
+                                break
+                        if victim:
+                            victim.kill()
+                        p.col, p.row = i, j
                         if not check(color):
-                            Mate=False
-                        p.col=oldX
-                        p.row=oldY
+                            Mate = False
+                        p.col, p.row = oldX, oldY
+                        if victim:
+                            allPiece.add(victim)
+                        if not Mate:
+                            return False
     return Mate
-def checkMove(piece,col,row):
+def checkMove(piece,col,row,simulate=False):
     if piece.col==col and piece.row==row:
         return False
     if piece.piece_type=="pion":
@@ -198,7 +213,7 @@ def checkMove(piece,col,row):
                         for p in allPiece:
                             if (p!=piece and p.col==col and (p.row==row or p.row==row+1)):
                                 return False
-                        if row==4:
+                        if row==4 and not simulate:
                             piece.moved=True
                         return True
                     else:
@@ -228,7 +243,7 @@ def checkMove(piece,col,row):
                         for p in allPiece:
                             if (p!=piece and p.col==col and (p.row==row or p.row==row-1)):
                                 return False
-                        if row==3:
+                        if row==3 and not simulate:
                             piece.moved=True
                         return True
                     else:
@@ -250,8 +265,6 @@ def checkMove(piece,col,row):
                     if p.row==row and p.col==col:
                         if p.color==piece.color:
                             return False
-                        else:
-                            return True
                 return True
             if row>piece.row:
                 for p in allPiece:
@@ -260,8 +273,6 @@ def checkMove(piece,col,row):
                     if p.row==row and p.col==col:
                         if p.color==piece.color:
                             return False
-                        else:
-                            return True
                 return True
         elif piece.row==row:
             if col<piece.col:
@@ -271,8 +282,6 @@ def checkMove(piece,col,row):
                     if p.row==row and p.col==col:
                         if p.color==piece.color:
                             return False
-                        else:
-                            return True
                 return True
             if col>piece.col:
                 for p in allPiece:
@@ -281,8 +290,6 @@ def checkMove(piece,col,row):
                     if p.row==row and p.col==col:
                         if p.color==piece.color:
                             return False
-                        else:
-                            return True
                 return True
         else:
             return False
@@ -312,18 +319,23 @@ def checkMove(piece,col,row):
                 if p.row==row and p.col==col:
                     if p.color==piece.color:
                         return False
-                    else:
-                        return True
             return True
         else:
             return False
     elif piece.piece_type=="rege":
         if abs(piece.row-row)>1 or abs(piece.col-col)>1:
+            if simulate==True:
+                return False
             if piece.moved==True:
                 return False
             else:
+                enemy = "black" if piece.color == "white" else "white"
+                if squareAttacked(piece.col, piece.row, enemy):
+                    return False
                 rookS = None
                 if col==piece.col-2:
+                    if squareAttacked(piece.col - 1, piece.row, enemy):
+                        return False
                     for p in allPiece:
                         if p.piece_type=="tura" and p.col==piece.col-4 and p.moved==False:
                             rookS=p
@@ -336,6 +348,8 @@ def checkMove(piece,col,row):
                         rookS.updatePosition()
                         return True
                 elif col==piece.col+2:
+                    if squareAttacked(piece.col + 1, piece.row, enemy):
+                        return False
                     for p in allPiece:
                         if p.piece_type=="tura" and p.col==piece.col+3 and p.moved==False:
                             rookS=p
@@ -368,8 +382,6 @@ def checkMove(piece,col,row):
                 if p.row==row and p.col==col:
                     if p.color==piece.color:
                         return False
-                    else:
-                        return True
             return True
         elif col==piece.col:
             for p in allPiece:
@@ -378,8 +390,6 @@ def checkMove(piece,col,row):
                 if p.row==row and p.col==col:
                     if p.color==piece.color:
                         return False
-                    else:
-                        return True
             return True
         elif row==piece.row:
             for p in allPiece:
@@ -388,18 +398,42 @@ def checkMove(piece,col,row):
                 if p.row==row and p.col==col:
                     if p.color==piece.color:
                         return False
-                    else:
-                        return True
             return True
         else:
             return False
 
 
+def drawPromotionMenu(color):
+    options = ["regina", "tura", "nebun", "cal"]
+    images = {
+        "white": ["Asset/white-queen.png", "Asset/white-rook.png", "Asset/white-bishop.png", "Asset/white-knight.png"],
+        "black": ["Asset/black-queen.png", "Asset/black-rook.png", "Asset/black-bishop.png", "Asset/black-knight.png"],
+    }
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 140))
+    screen.blit(overlay, (0, 0))
+    box_w, box_h = 500, 160
+    box_x = WIDTH // 2 - box_w // 2
+    box_y = HEIGHT // 2 - box_h // 2
+    pygame.draw.rect(screen, (240, 235, 220), (box_x, box_y, box_w, box_h), border_radius=16)
+    pygame.draw.rect(screen, (100, 100, 100), (box_x, box_y, box_w, box_h), width=2, border_radius=16)
+    label = font.render("Promote to:", True, (0, 0, 0))
+    screen.blit(label, (box_x + box_w // 2 - label.get_width() // 2, box_y + 10))
+    for i, img_path in enumerate(images[color]):
+        img = pygame.image.load(img_path).convert_alpha()
+        img = pygame.transform.scale(img, (80, 80))
+        ix = box_x + 20 + i * 115
+        iy = box_y + 65
+        screen.blit(img, (ix, iy))
+
 def reset_game():
-    global turn, selectedPiece, squareSel, previousPiece, inCheck, mated, dragging, original_col, original_row
+    global turn, selectedPiece, squareSel, previousPiece, inCheck, mated, dragging, original_col, original_row,promoting,promotingPawn,promotingColor
     turn = "white"
     inCheck = False
     mated = False
+    promoting = False
+    promotionPawn = None
+    promotionColor = None
     if squareSel != None:
         squareSel.resetColor()
     squareSel = None
@@ -419,6 +453,9 @@ previousPiece = None
 dragging = False
 original_col = 0
 original_row = 0
+promoting = False
+promotionPawn = None
+promotionColor = None
 running=True
 setPieces()
 while running:
@@ -470,6 +507,35 @@ while running:
                     reset_game()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             (x, y) = pygame.mouse.get_pos()
+            if promoting:
+                options = ["regina", "tura", "nebun", "cal"]
+                imgs = {
+                    "white": ["Asset/white-queen.png", "Asset/white-rook.png", "Asset/white-bishop.png",
+                              "Asset/white-knight.png"],
+                    "black": ["Asset/black-queen.png", "Asset/black-rook.png", "Asset/black-bishop.png",
+                              "Asset/black-knight.png"],
+                }
+                box_x = WIDTH // 2 - 250
+                box_y = HEIGHT // 2 - 80
+                for i, piece_type in enumerate(options):
+                    ix = box_x + 20 + i * 115
+                    iy = box_y + 65
+                    if ix <= x <= ix + 80 and iy <= y <= iy + 80:
+                        img_path = imgs[promotionColor][i]
+                        col = promotionPawn.col
+                        row = promotionPawn.row
+                        promotionPawn.kill()
+                        newPiece = Piece(promotionColor, piece_type, img_path, col, row)
+                        allPiece.add(newPiece)
+                        if promotionColor == "white":
+                            turn = "black"
+                        else:
+                            turn = "white"
+                        promoting = False
+                        promotionPawn = None
+                        promotionColor = None
+                        break
+                continue
             if mated==True:
                 continue
             if x >= 188 and x < 1212 and y >= 188 and y < 1212:
@@ -526,53 +592,62 @@ while running:
                         squareSel = None
         if attempt_move and selectedPiece != None:
             if checkMove(selectedPiece, targetCol, targetRow):
+                captured = None
+                for p in allPiece:
+                    if p.col == targetCol and p.row == targetRow and p != selectedPiece:
+                        captured = p
+                        break
+                if captured:
+                    captured.kill()
                 selectedPiece.col = targetCol
                 selectedPiece.row = targetRow
                 if check(turn):
                     selectedPiece.col = original_col
                     selectedPiece.row = original_row
                     selectedPiece.updatePosition()
+                    if captured:
+                        allPiece.add(captured)
                     selectedPiece = None
                     if squareSel != None:
                         squareSel.resetColor()
                         squareSel = None
                     continue
                 enPassant = False
-                if selectedPiece.piece_type == "pion" and original_col != targetCol:
-                    enemy = False
-                    for p in allPiece:
-                        if p.row == targetRow and p.col == targetCol and p != selectedPiece:
-                            enemy = True
-                            break
-                    if not enemy:
-                        enPassant = True
+                if selectedPiece.piece_type == "pion" and original_col != targetCol and captured is None:
+                    enPassant = True
                 selectedPiece.updatePosition()
                 move_sound.play()
+                if selectedPiece.piece_type == "pion":
+                    if (selectedPiece.color == "white" and selectedPiece.row == 0) or (selectedPiece.color == "black" and selectedPiece.row == 7):
+                        promoting = True
+                        promotionPawn = selectedPiece
+                        promotionColor = selectedPiece.color
                 if selectedPiece.piece_type == "rege" or selectedPiece.piece_type == "tura":
                     selectedPiece.moved = True
                 if previousPiece != None and previousPiece.piece_type == "pion":
                     previousPiece.moved = False
                 previousPiece = selectedPiece
-                if turn == "white":
-                    turn = "black"
-                    for p in allPiece:
-                        if p.color == "black" and p.row == targetRow and p.col == targetCol:
-                            p.kill()
-                    if enPassant:
+                if not promoting:
+                    if turn == "white":
+                        turn = "black"
                         for p in allPiece:
-                            if p.col == targetCol and p.row == targetRow + 1:
+                            if p.color == "black" and p.row == targetRow and p.col == targetCol:
                                 p.kill()
-                                break
-                else:
-                    turn = "white"
-                    for p in allPiece:
-                        if p.color == "white" and p.row == targetRow and p.col == targetCol:
-                            p.kill()
-                    if enPassant:
+                        if enPassant:
+                            for p in allPiece:
+                                if p.col == targetCol and p.row == targetRow + 1:
+                                    p.kill()
+                                    break
+                    else:
+                        turn = "white"
                         for p in allPiece:
-                            if p.col == targetCol and p.row == targetRow - 1:
+                            if p.color == "white" and p.row == targetRow and p.col == targetCol:
                                 p.kill()
-                                break
+                        if enPassant:
+                            for p in allPiece:
+                                if p.col == targetCol and p.row == targetRow - 1:
+                                    p.kill()
+                                    break
                 selectedPiece = None
                 if squareSel != None:
                     squareSel.resetColor()
@@ -585,4 +660,6 @@ while running:
                 if squareSel != None:
                     squareSel.resetColor()
                     squareSel = None
+    if promoting:
+        drawPromotionMenu(promotionColor)
     pygame.display.flip()

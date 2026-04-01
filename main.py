@@ -158,7 +158,7 @@ def check(color):
             break
     for p in allPiece:
         if p!=Reg and p.color!=color:
-            if checkMove(p,Reg.col,Reg.row):
+            if checkMove(p,Reg.col,Reg.row,simulate=True):
                 return True
 
 def squareAttacked(col, row, byColor):

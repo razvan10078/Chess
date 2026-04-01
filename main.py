@@ -1,7 +1,11 @@
 import pygame
 pygame.init()
 pygame.mixer.init()
-dim=128
+width=1536
+height=1536
+dim=height/12
+offset_x=(width-dim*8)/2
+offset_y=(height-dim*8)/2
 move_sound = pygame.mixer.Sound("Asset/Move.mp3")
 check_sound = pygame.mixer.Sound("Asset/GenericNotify.mp3")
 hugeFont = pygame.font.Font('freesansbold.ttf', 72)
@@ -14,16 +18,21 @@ whiteWon = hugeFont.render("Checkmate White won!",True,(0,0,0))
 blackWon = hugeFont.render("Checkmate Black won!",True,(0,0,0))
 rst = font.render("Press R to restart",True,(0,0,0))
 box = whiteTurn.get_rect()
-box.center=(700,94)
+box.center=(width/2,offset_y/2)
 chBox = ch.get_rect()
-chBox.center=(700,141)
+chBox.center=(width/2,offset_y/2*1.5)
 endBox = whiteWon.get_rect()
-endBox.center=(700,700)
+endBox.center=(width/2,height/2)
 rstBox = rst.get_rect()
-rstBox.center=(700,94)
+rstBox.center=(width/2,offset_y)
 boardFont = pygame.font.SysFont('Arial', 32,bold=True)
 columns=['A','B','C','D','E','F','G','H']
 rows=['8','7','6','5','4','3','2','1']
+CLOCK_TIME = 600
+white_time = CLOCK_TIME
+black_time = CLOCK_TIME
+last_tick = pygame.time.get_ticks()
+time_out = None
 
 class square(pygame.sprite.Sprite):
     def __init__(self,color,x,y):
@@ -48,7 +57,7 @@ class square(pygame.sprite.Sprite):
 
 
 class Piece(pygame.sprite.Sprite):
-    def __init__(self, color, piece_type, image_path, col, row, offset_x=188, offset_y=188):
+    def __init__(self, color, piece_type, image_path, col, row, offset_x=(width-dim*8)/2, offset_y=(height-dim*8)/2):
         super().__init__()
         self.image = pygame.image.load(image_path).convert_alpha()
         self.rect = self.image.get_rect()
@@ -60,19 +69,21 @@ class Piece(pygame.sprite.Sprite):
         self.dim = dim
         self.offset_x = offset_x
         self.offset_y = offset_y
+        self.image_path = image_path
+        self.image = pygame.transform.scale(self.image, (int(dim), int(dim)))
         self.updatePosition()
 
     def updatePosition(self):
-        x_pos=self.offset_x+(self.col*dim)
-        y_pos=self.offset_y+(self.row*dim)
-        self.rect.center=(x_pos+dim//2,y_pos+dim//2)
+        x_pos=self.offset_x+(self.col*self.dim)
+        y_pos=self.offset_y+(self.row*self.dim)
+        self.rect.center=(x_pos+self.dim//2,y_pos+self.dim//2)
 
 tab=[]
 for row in range(8):
     cur=[]
     for col in range(8):
-        x_pos=188+col*dim
-        y_pos=188+row*dim
+        x_pos=offset_x+col*dim
+        y_pos=offset_y+row*dim
         if(row+col)%2==0:
             color="white"
         else:
@@ -94,8 +105,7 @@ nebunAlb=pygame.image.load("Asset/white-bishop.png")
 calAlb=pygame.image.load("Asset/white-knight.png")
 turaAlba=pygame.image.load("Asset/white-rook.png")
 
-WIDTH, HEIGHT = 1400, 1400
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
 pygame.display.set_caption("Sah")
 
 timer = pygame.time.Clock()
@@ -104,34 +114,34 @@ fps = 60
 allPiece=pygame.sprite.Group()
 def setPieces():
     for col in range(8):
-        pionN=Piece("black","pion","Asset/black-pawn.png",col,1)
-        pionA=Piece("white","pion","Asset/white-pawn.png",col,6)
+        pionN=Piece("black","pion","Asset/black-pawn.png",col,1,offset_x,offset_y)
+        pionA=Piece("white","pion","Asset/white-pawn.png",col,6,offset_x,offset_y)
         allPiece.add(pionN)
         allPiece.add(pionA)
     for col in range(8):
         if col==0 or col==7:
-            turaN=Piece("black","tura","Asset/black-rook.png",col,0)
-            turaA=Piece("white","tura","Asset/white-rook.png",col,7)
+            turaN=Piece("black","tura","Asset/black-rook.png",col,0,offset_x,offset_y)
+            turaA=Piece("white","tura","Asset/white-rook.png",col,7,offset_x,offset_y)
             allPiece.add(turaN)
             allPiece.add(turaA)
         elif col==1 or col==6:
-            calN=Piece("black","cal","Asset/black-knight.png",col,0)
-            calA=Piece("white","cal","Asset/white-knight.png",col,7)
+            calN=Piece("black","cal","Asset/black-knight.png",col,0,offset_x,offset_y)
+            calA=Piece("white","cal","Asset/white-knight.png",col,7,offset_x,offset_y)
             allPiece.add(calN)
             allPiece.add(calA)
         elif col==2 or col==5:
-            nebunN=Piece("black","nebun","Asset/black-bishop.png",col,0)
-            nebunA=Piece("white","nebun","Asset/white-bishop.png",col,7)
+            nebunN=Piece("black","nebun","Asset/black-bishop.png",col,0,offset_x,offset_y)
+            nebunA=Piece("white","nebun","Asset/white-bishop.png",col,7,offset_x,offset_y)
             allPiece.add(nebunN)
             allPiece.add(nebunA)
         elif col==4:
-            regeN=Piece("black","rege","Asset/black-king.png",col,0)
-            regeA=Piece("white","rege","Asset/white-king.png",col,7)
+            regeN=Piece("black","rege","Asset/black-king.png",col,0,offset_x,offset_y)
+            regeA=Piece("white","rege","Asset/white-king.png",col,7,offset_x,offset_y)
             allPiece.add(regeN)
             allPiece.add(regeA)
         elif col==3:
-            reginaN=Piece("black","regina","Asset/black-queen.png",col,0)
-            reginaA=Piece("white","regina","Asset/white-queen.png",col,7)
+            reginaN=Piece("black","regina","Asset/black-queen.png",col,0,offset_x,offset_y)
+            reginaA=Piece("white","regina","Asset/white-queen.png",col,7,offset_x,offset_y)
             allPiece.add(reginaN)
             allPiece.add(reginaA)
 
@@ -401,7 +411,29 @@ def checkMove(piece,col,row,simulate=False):
             return True
         else:
             return False
-
+def rebuild_layout():
+    global dim, offset_x, offset_y, box, chBox, endBox, rstBox, width, height
+    dim = min(width, height) / 12
+    offset_x = (width - dim * 8) / 2
+    offset_y = (height - dim * 8) / 2
+    box.center = (width / 2, offset_y / 2)
+    chBox.center = (width / 2, offset_y / 2 * 3)
+    endBox.center = (width / 2, height / 2)
+    rstBox.center = (width / 2, offset_y / 2)
+    for r in range(8):
+        for c in range(8):
+            sq = tab[r][c]
+            sq.surf = pygame.Surface((dim, dim))
+            sq.resetColor()
+            sq.rect.topleft = (offset_x + c * dim, offset_y + r * dim)
+    for p in allPiece:
+        p.dim = dim
+        p.offset_x = offset_x
+        p.offset_y = offset_y
+        img = pygame.image.load(p.image_path).convert_alpha()
+        p.image = pygame.transform.scale(img, (int(dim), int(dim)))
+        p.rect = p.image.get_rect()
+        p.updatePosition()
 
 def drawPromotionMenu(color):
     options = ["regina", "tura", "nebun", "cal"]
@@ -409,12 +441,12 @@ def drawPromotionMenu(color):
         "white": ["Asset/white-queen.png", "Asset/white-rook.png", "Asset/white-bishop.png", "Asset/white-knight.png"],
         "black": ["Asset/black-queen.png", "Asset/black-rook.png", "Asset/black-bishop.png", "Asset/black-knight.png"],
     }
-    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 140))
     screen.blit(overlay, (0, 0))
     box_w, box_h = 500, 160
-    box_x = WIDTH // 2 - box_w // 2
-    box_y = HEIGHT // 2 - box_h // 2
+    box_x = width // 2 - box_w // 2
+    box_y = height // 2 - box_h // 2
     pygame.draw.rect(screen, (240, 235, 220), (box_x, box_y, box_w, box_h), border_radius=16)
     pygame.draw.rect(screen, (100, 100, 100), (box_x, box_y, box_w, box_h), width=2, border_radius=16)
     label = font.render("Promote to:", True, (0, 0, 0))
@@ -426,8 +458,13 @@ def drawPromotionMenu(color):
         iy = box_y + 65
         screen.blit(img, (ix, iy))
 
+def format_time(seconds):
+    seconds = max(0, int(seconds))
+    m, s = divmod(seconds, 60)
+    return f"{m:02d}:{s:02d}"
+
 def reset_game():
-    global turn, selectedPiece, squareSel, previousPiece, inCheck, mated, dragging, original_col, original_row,promoting,promotingPawn,promotingColor
+    global turn, selectedPiece, squareSel, previousPiece, inCheck, mated, dragging, original_col, original_row,promoting,promotingPawn,promotingColor,white_time,black_time,last_tick,time_out
     turn = "white"
     inCheck = False
     mated = False
@@ -442,6 +479,10 @@ def reset_game():
     dragging = False
     original_col = 0
     original_row = 0
+    white_time = CLOCK_TIME
+    black_time = CLOCK_TIME
+    last_tick = pygame.time.get_ticks()
+    time_out = None
     allPiece.empty()
     setPieces()
 turn = "white"
@@ -460,6 +501,20 @@ running=True
 setPieces()
 while running:
     screen.fill((141, 177, 235))
+    now = pygame.time.get_ticks()
+    dt = (now - last_tick) / 1000.0
+    last_tick = now
+    if not mated and not promoting and time_out is None:
+        if turn == "white":
+            white_time -= dt
+            if white_time <= 0:
+                white_time = 0
+                time_out = "white"
+        else:
+            black_time -= dt
+            if black_time <= 0:
+                black_time = 0
+                time_out = "black"
     if check(turn):
         if not inCheck:
             check_sound.play()
@@ -477,20 +532,41 @@ while running:
             screen.blit(ch,chBox)
     else:
         inCheck = False
+    if time_out is not None:
+        mated = True
+        screen.fill((247, 228, 228))
+        winner = "White" if time_out == "black" else "Black"
+        msg = hugeFont.render(f"{winner} wins on time!", True, (0, 0, 0))
+        msg_rect = msg.get_rect(center=(width / 2, height / 2))
+        screen.blit(msg, msg_rect)
+        screen.blit(rst, rstBox)
     if not mated:
         for row_index,row in enumerate(tab):
             for col_index,square in enumerate(row):
                 screen.blit(square.surf,square.rect)
         for i in range(8):
             text_surf = boardFont.render(columns[i], True, (0, 0, 0))
-            x_center = 188 + (i * 128) + 64
-            text_rect = text_surf.get_rect(center=(x_center, 1250))
+            x_center = offset_x + (i * dim) + dim/2
+            text_rect = text_surf.get_rect(center=(x_center, offset_y + dim * 8 + dim * 0.5))
             screen.blit(text_surf, text_rect)
             text_surf = boardFont.render(rows[i], True, (0, 0, 0))
-            y_center = 188 + (i * 128) + 64
-            text_rect = text_surf.get_rect(center=(150, y_center))
+            y_center = offset_y + (i * dim) + dim/2
+            text_rect = text_surf.get_rect(center=(offset_x - dim * 0.5, y_center))
             screen.blit(text_surf, text_rect)
         allPiece.draw(screen)
+        clock_bg_white = (255, 255, 255) if turn == "white" else (180, 180, 180)
+        clock_bg_black = (50, 50, 50) if turn == "black" else (120, 120, 120)
+        wt_surf = font.render(format_time(white_time), True, (0, 0, 0))
+        wt_rect = wt_surf.get_rect()
+        wt_rect.bottomright = (offset_x + dim * 9.5, offset_y + dim * 8)
+        pygame.draw.rect(screen, clock_bg_white,
+                         wt_rect.inflate(20, 10), border_radius=8)
+        screen.blit(wt_surf, wt_rect)
+        bt_surf = font.render(format_time(black_time), True, (255, 255, 255))
+        bt_rect = bt_surf.get_rect()
+        bt_rect.topright = (offset_x + dim * 9.5, offset_y)
+        pygame.draw.rect(screen, clock_bg_black,bt_rect.inflate(20, 10), border_radius=8)
+        screen.blit(bt_surf, bt_rect)
         if turn=="white":
             screen.blit(whiteTurn,box)
         else:
@@ -515,8 +591,8 @@ while running:
                     "black": ["Asset/black-queen.png", "Asset/black-rook.png", "Asset/black-bishop.png",
                               "Asset/black-knight.png"],
                 }
-                box_x = WIDTH // 2 - 250
-                box_y = HEIGHT // 2 - 80
+                box_x = width // 2 - 250
+                box_y = height // 2 - 80
                 for i, piece_type in enumerate(options):
                     ix = box_x + 20 + i * 115
                     iy = box_y + 65
@@ -525,7 +601,7 @@ while running:
                         col = promotionPawn.col
                         row = promotionPawn.row
                         promotionPawn.kill()
-                        newPiece = Piece(promotionColor, piece_type, img_path, col, row)
+                        newPiece = Piece(promotionColor, piece_type, img_path, col, row, offset_x, offset_y)
                         allPiece.add(newPiece)
                         if promotionColor == "white":
                             turn = "black"
@@ -538,9 +614,9 @@ while running:
                 continue
             if mated==True:
                 continue
-            if x >= 188 and x < 1212 and y >= 188 and y < 1212:
-                clickedCol = (x - 188) // 128
-                clickedRow = (y - 188) // 128
+            if x >= offset_x and x < width-offset_x and y >= offset_y and y < height-offset_y:
+                clickedCol = int((x - offset_x) // dim)
+                clickedRow = int((y - offset_y) // dim)
                 if selectedPiece != None and not dragging:
                     clicked_own_piece = False
                     for p in allPiece:
@@ -573,9 +649,9 @@ while running:
             if dragging and selectedPiece != None:
                 dragging = False
                 (x, y) = pygame.mouse.get_pos()
-                if x >= 188 and x < 1212 and y >= 188 and y < 1212:
-                    releasedCol = (x - 188) // 128
-                    releasedRow = (y - 188) // 128
+                if x >= offset_x and x < width-offset_x and y >= offset_y and y < height-offset_y:
+                    releasedCol = int((x - offset_x) // dim)
+                    releasedRow = (int((y - offset_y) // dim))
                     if releasedCol == original_col and releasedRow == original_row:
                         selectedPiece.updatePosition()
                     else:
@@ -590,6 +666,9 @@ while running:
                     if squareSel != None:
                         squareSel.resetColor()
                         squareSel = None
+        elif event.type in (pygame.VIDEORESIZE, pygame.WINDOWRESIZED):
+                        width, height = screen.get_size()  # works for both
+                        rebuild_layout()
         if attempt_move and selectedPiece != None:
             if checkMove(selectedPiece, targetCol, targetRow):
                 captured = None
